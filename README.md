@@ -1,6 +1,12 @@
 # Equity_Volatility_Strategy
 
-Systematic event-driven options straddle research across three catalysts — earnings announcements, FOMC decisions, and geopolitical shocks — using S&P 500 constituents and sector ETFs from 2016-2025. Identifies exploitable IV mispricing patterns through walk-forward long/short backtesting.
+Systematic event-driven options straddle research across three catalysts:
+
+1. Earnings Announcements
+2. FOMC Decisions
+3. Geopolitical Shocks
+
+Using S&P 500 constituents and sector ETFs from 2016-2025. Identifies exploitable IV mispricing patterns through walk-forward long/short backtesting.
 
 ---
 
@@ -14,9 +20,9 @@ The theoretical foundation draws partially from Gao, Xing & Zhang (2018), "Antic
 
 ## Academic Foundation
 
-**Gao, Xing & Zhang (2018) — JFQA**
+**Gao, Xing & Zhang (2018) - JFQA**
 
-The paper's central finding is that implied volatility rises systematically in the 3 days before an earnings announcement and collapses sharply after results are released — a pattern known as IV crush. The authors argue that this run-up is not fully rational: the market underprices earnings uncertainty in the pre-announcement window, creating a long straddle edge that earns statistically significant positive returns even after controlling for standard risk factors.
+The paper's central finding is that implied volatility rises systematically in the 3 days before an earnings announcement and collapses sharply after results are released, a pattern known as IV crush. The authors argue that this run-up is not fully rational: the market underprices earnings uncertainty in the pre-announcement window, creating a long straddle edge that earns statistically significant positive returns even after controlling for standard risk factors.
 
 The paper provides five option selection filters that we implement across all three pipelines:
 
@@ -28,7 +34,7 @@ The paper provides five option selection filters that we implement across all th
 | F6 | Abs(delta): 0.375-0.625 |
 | F7 | Moneyness: 0.9-1.1 |
 
-ATM strike selection uses the globally nearest strike to spot within the moneyness window, then the nearest available expiry. Exit prices use the same contract pinned from entry — strike and expiry are fixed at entry and do not change on exit.
+ATM strike selection uses the globally nearest strike to spot within the moneyness window, then the nearest available expiry. Exit prices use the same contract pinned from entry - strike and expiry are fixed at entry and do not change on exit.
 
 The return metric throughout is `pnl_pct = (exit_straddle_mid - entry_straddle_mid) / entry_straddle_mid`, representing return on the straddle premium paid, assuming equal dollar sizing per trade.
 
@@ -48,7 +54,7 @@ All options data is collected from the **Polygon.io** historical API. Underlying
 
 S&P 500 constituent membership is determined point-in-time using a daily snapshot CSV covering 1996-2026, eliminating survivorship bias. Only companies that were actually in the index during a given year are included in that year's analysis.
 
-### Sector ETF Universe (FOMC and Geopolitical)
+### Sector ETF Universe (for FOMC and Geopolitical)
 
 | Ticker | Description |
 |--------|-------------|
@@ -100,7 +106,7 @@ The earnings pipeline collects ATM straddle prices for all S&P 500 constituents 
 
 Key findings:
 - The T+0 exit combos (enter pre-announcement, exit on earnings day) show the most consistent positive returns, capturing the IV run-up without holding through IV crush
-- Win rates on long straddles are below 50% on most combos, confirming the positive skew nature of the strategy — occasional large wins drive the average
+- Win rates on long straddles are below 50% on most combos, confirming the positive skew nature of the strateg with occasional large wins drive the average
 - Technology sector shows the strongest and most consistent pre-announcement edge
 - Returns deteriorate sharply after T+0 exit as IV crush dominates any continued directional movement
 
@@ -110,9 +116,9 @@ The FOMC pipeline tests whether rate decision uncertainty is systematically misp
 
 Key findings:
 - SPY shows the classic short-duration pattern: positive returns only at T+0 exit, steep losses thereafter as IV crush dominates
-- QQQ exhibits a longer positive window, remaining profitable through T+1 and T+2 exits — tech sector rate sensitivity creates sustained post-announcement movement
-- XLK is the strongest performer with a nearly uniformly green matrix, including large positive returns on E+0/X+2 and E+0/X+3 entries — suggesting FOMC decision day itself is the optimal entry for technology
-- TLT, despite being the most directly rate-sensitive instrument, shows catastrophic losses at T+2 and T+3 exits (approaching -32%) with near-zero win rates — suggesting treasury options already fully price in rate uncertainty before the meeting
+- QQQ exhibits a longer positive window, remaining profitable through T+1 and T+2 exits - tech sector rate sensitivity creates sustained post-announcement movement
+- XLK is the strongest performer with a nearly uniformly green matrix, including large positive returns on E+0/X+2 and E+0/X+3 entries - suggesting FOMC decision day itself is the optimal entry for technology
+- TLT, despite being the most directly rate-sensitive instrument, shows catastrophic losses at T+2 and T+3 exits (approaching -32%) with near-zero win rates - suggesting treasury options already fully price in rate uncertainty before the meeting
 - XLE shows the hardest exit rule in the dataset: profitable only at T+0, with win rates collapsing to 19-26% at T+2 and T+3
 - Defensive sectors (XLV, XLP) show no meaningful FOMC edge and low coverage, confirming the options market does not build IV into these sectors around Fed meetings
 
@@ -141,7 +147,7 @@ The geopolitical pipeline takes a fundamentally different approach. Since events
 | Currency | 3 |
 | Central Bank | 1 |
 
-The strategy uses `(category, entry_offset, exit_offset)` triples as signal keys — the same combo may be long for Military/War events and short for Pandemic events. Walk-forward validation uses 2018-2021 as training and 2022-2025 as test.
+The strategy uses `(category, entry_offset, exit_offset)` triples as signal keys - the same combo may be long for Military/War events and short for Pandemic events. Walk-forward validation uses 2018-2021 as training and 2022-2025 as test.
 
 ---
 
@@ -153,9 +159,9 @@ All three strategies use strict walk-forward validation to avoid look-ahead bias
 
 For earnings the split is approximately 60/40 (2016-2021 train, 2022-2025 test), chosen to cover the zero-rate era and COVID shock in training while testing across the full rate cycle including hiking, plateau, and cutting regimes.
 
-For FOMC the split is 2020-2022 train, 2023-2025 test — 3 years of training covering zero rates and the 2022 hiking shock, tested across the plateau and cutting cycle.
+For FOMC the split is 2020-2022 train, 2023-2025 test - 3 years of training covering zero rates and the 2022 hiking shock, tested across the plateau and cutting cycle.
 
-For geopolitical the split is 2018-2021 train, 2022-2025 test — covering the trade war and COVID periods in training, tested across Ukraine/Russia, Middle East conflicts, and the 2022-2025 macro regime.
+For geopolitical the split is 2018-2021 train, 2022-2025 test - covering the trade war and COVID periods in training, tested across Ukraine/Russia, Middle East conflicts, and the 2022-2025 macro regime.
 
 ### Signal Identification
 
