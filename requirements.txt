@@ -1,0 +1,6 @@
+numpy
+pandas
+yfinance
+polygon-api-client
+requests
+plotly
