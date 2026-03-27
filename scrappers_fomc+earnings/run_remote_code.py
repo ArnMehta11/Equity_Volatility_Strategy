@@ -2,7 +2,7 @@
 # Import neccessary libraries
 import warnings
 warnings.filterwarnings("ignore")
-import math, os, json
+import math, os, json, time
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -404,11 +404,30 @@ class SplitAdjuster:
 adjuster = SplitAdjuster(cache_file=SPLIT_CACHE_FILE)
 
 # %%
+# Retry helper for Polygon API calls (handles 504 gateway timeouts)
+def _retry(fn, max_retries=5, base_delay=2.0):
+    """Call fn() with exponential backoff on failure."""
+    for attempt in range(max_retries):
+        try:
+            return fn()
+        except Exception as e:
+            err_str = str(e)
+            if attempt == max_retries - 1:
+                raise
+            # Back off on 504, 429, or connection errors
+            if any(code in err_str for code in ["504", "429", "Max retries", "ConnectionError"]):
+                delay = base_delay * (2 ** attempt)
+                print(f"    [retry {attempt+1}/{max_retries}] waiting {delay:.0f}s … {err_str[:80]}")
+                time.sleep(delay)
+            else:
+                raise
+
+# %%
 # Polygon Helpers
 def _ohlc(client, oticker, date_str):
     try:
         d    = pd.to_datetime(date_str).strftime("%Y-%m-%d")
-        aggs = list(client.get_aggs(oticker, 1, "day", d, d))
+        aggs = list(_retry(lambda: client.get_aggs(oticker, 1, "day", d, d)))
         if aggs:
             a = aggs[0]
             return (
@@ -480,11 +499,11 @@ def _entry(client, ticker, entry_date, spot):
     exp_max  = (trade_dt + timedelta(days=MAX_DTE)).strftime("%Y-%m-%d")
 
     try:
-        contracts = list(client.list_options_contracts(
+        contracts = list(_retry(lambda: client.list_options_contracts(
             underlying_ticker=ticker,
             expiration_date_gte=exp_min, expiration_date_lte=exp_max,
             expired=True, limit=1000,
-        ))
+        )))
     except Exception as e:
         print(f"  [entry] {ticker} {entry_date}: {e}"); return None
     if not contracts: return None
@@ -543,11 +562,11 @@ def _exit(client, ticker, exit_date, pin_strike, pin_expiry, spot_exit):
     if trade_dt > exp_dt: return None
 
     try:
-        contracts = list(client.list_options_contracts(
+        contracts = list(_retry(lambda: client.list_options_contracts(
             underlying_ticker=ticker,
             expiration_date_gte=pin_expiry, expiration_date_lte=pin_expiry,
             expired=True, limit=1000,
-        ))
+        )))
     except Exception as e:
         print(f"  [exit] {ticker} {exit_date}: {e}"); return None
     if not contracts: return None
@@ -733,6 +752,8 @@ for job_num, (ticker, event_date, event_type) in enumerate(jobs, 1):
         for r in rows:
             done.add((r["ticker"], r["event_date"], r["event_type"],
                       r["entry_offset"], r["exit_offset"]))
+
+    time.sleep(0.25)  # throttle to reduce Polygon API pressure
 
     # Checkpoint every 100 jobs
     if job_num % 100 == 0 and os.path.exists(OUTPUT_FILE):
