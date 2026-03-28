@@ -5,3 +5,4 @@ polygon-api-client
 requests
 plotly
 dotenv
+nbformat

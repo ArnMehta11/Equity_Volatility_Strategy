@@ -1,3 +1,4 @@
 .env
 .venv
 split_cache.json
+.claude
