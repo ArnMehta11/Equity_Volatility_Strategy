@@ -417,7 +417,7 @@ def _retry(fn, max_retries=5, base_delay=2.0):
             # Back off on 504, 429, or connection errors
             if any(code in err_str for code in ["504", "429", "Max retries", "ConnectionError"]):
                 delay = base_delay * (2 ** attempt)
-                print(f"    [retry {attempt+1}/{max_retries}] waiting {delay:.0f}s … {err_str[:80]}")
+                print(f"    [retry {attempt+1}/{max_retries}] waiting {delay:.0f}s … {err_str}")
                 time.sleep(delay)
             else:
                 raise
